@@ -5,8 +5,8 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.0</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <version>2.7.4</version>
+        <relativePath/>
     </parent>
     <groupId>com.ctgu</groupId>
     <artifactId>AutoReport</artifactId>
@@ -16,11 +16,11 @@
     <properties>
         <java.version>1.8</java.version>
         <swagger2.version>3.0.0</swagger2.version>
-        <springboot.version>2.7.0</springboot.version>
+        <springboot.version>2.7.4</springboot.version>
         <mybatis-plus.version>3.5.2</mybatis-plus.version>
         <mysql-driver.version>8.0.30</mysql-driver.version>
         <shiro-spring.version>1.9.1</shiro-spring.version>
-        <druid-springboot.version>1.2.12</druid-springboot.version>
+        <druid-springboot.version>1.2.13-SNSAPSHOT</druid-springboot.version>
         <oa.version>0.0.1</oa.version>
     </properties>
     <dependencies>
@@ -80,6 +80,16 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity5</artifactId>
+            <version>3.0.4.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+            <version>${springboot.version}</version>
         </dependency>
     </dependencies>
 
