@@ -70,10 +70,15 @@
         }, methods: {
             createDept() {
                 const this_vue = this;
+                this_vue.$message({
+                    message: "您已成功提交信息，正在登录至CTGU安全上报系统，请耐心等待，最多等待30s将返回结果",
+                    duration: 8 * 1000,
+                    type: 'success'
+                });
                 this.$axios({
                     method: 'post',
                     url: '/register',
-                    params: {
+                    data: {
                         'username': this.loginForm.username,
                         'password': this.loginForm.password,
                         'email': this.loginForm.email,
@@ -82,17 +87,20 @@
                     if (!res.data.flag) {
                         this_vue.$message({
                             message: res.data.message,
+                            duration: 8 * 1000,
                             type: 'warning'
                         });
                     } else {
                         this_vue.$message({
-                            message: res.data.message,
+                            message: "注册成功！每天8点到13点每隔一个小时将尝试自动安全上报",
+                            duration: 8 * 1000,
                             type: 'success'
                         });
                     }
                 }).catch(e => {
                     this_vue.$message({
-                        message: "与服务器连接异常",
+                        message: "与服务器连接异常,请检查网络连接或联系服务器管理员，异常信息为：" + e,
+                        duration: 8 * 1000,
                         type: 'error'
                     });
                 })

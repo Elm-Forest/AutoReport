@@ -1,0 +1,10 @@
+package com.ctgu.autoreport.common.constant;
+
+/**
+ * @author Elm Forest
+ * @date 14/10/2022 下午9:01
+ */
+public class CommonConst {
+    public static final Integer SERVICE_ERROR = 50000;
+    public static final Integer LOGIN_FAILED = 10000;
+}
