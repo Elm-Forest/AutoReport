@@ -29,7 +29,6 @@ public class RegisterImpl implements Register {
     @Autowired
     private RedisService redisService;
 
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public Result<?> register(UserVO userVO) {
         if (redisService.get(AUTO_REPORT + userVO.getUsername()) != null) {
