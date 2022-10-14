@@ -2,6 +2,7 @@ package com.ctgu.autoreport.service.core.impl;
 
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import com.ctgu.autoreport.common.dto.ServiceDTO;
 import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.core.Report;
@@ -12,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.ctgu.autoreport.common.constant.CommonConst.LOGIN_FAILED;
+import static com.ctgu.autoreport.common.constant.CommonConst.SERVICE_ERROR;
 import static java.lang.Thread.sleep;
 
 /**
@@ -36,9 +39,9 @@ public class ReportImpl implements Report {
             try {
                 HEADER_MAP.put("Referer", "http://yiqing.ctgu.edu.cn/wx/index/login.do?showWjdc=false&studentShowWjdc=false&currSchool=ctgu&CURRENT_YEAR=2019");
                 HEADER_MAP.put("Origin", "Origin: http://yiqing.ctgu.edu.cn");
-                boolean flag = login(user);
+                ServiceDTO serviceDTO = login(user);
                 System.out.println("当前用户:" + user.getUsername());
-                if (!flag) {
+                if (!serviceDTO.getFlag()) {
                     System.out.println("登陆失败！");
                     continue;
                 }
@@ -56,13 +59,33 @@ public class ReportImpl implements Report {
         }
     }
 
-    public boolean login(User user) {
+    public ServiceDTO login(User user) {
         String url = "http://yiqing.ctgu.edu.cn/wx/index/loginSubmit.do";
         HashMap<String, Object> paramMap = new HashMap<>();
         paramMap.put("username", user.getUsername());
         paramMap.put("password", user.getPassword());
-        HttpResponse result = HttpRequest.post(url).headerMap(HEADER_MAP, false).form(paramMap).timeout(60000).execute();
-        return "success".equals(result.body());
+        HttpResponse result;
+        try {
+            result = HttpRequest.post(url).headerMap(HEADER_MAP, false).form(paramMap).timeout(30000).execute();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return ServiceDTO.builder()
+                    .flag(false)
+                    .code(SERVICE_ERROR)
+                    .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，可能是安全上报服务器目前宕机，也可能是本平台ip地址遭受安全上报服务器封锁")
+                    .build();
+        }
+        assert result != null;
+        if ("success".equals(result.body())) {
+            return ServiceDTO.builder()
+                    .flag(true).build();
+        } else {
+            return ServiceDTO.builder()
+                    .flag(false)
+                    .code(LOGIN_FAILED)
+                    .message("您的账号登录至安全上报服务器失败，请检查重试！")
+                    .build();
+        }
     }
 
     String summit() {
