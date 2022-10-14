@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 @SpringBootApplication
 public class AutoReportApplication {
-
     public static void main(String[] args) {
         SpringApplication.run(AutoReportApplication.class, args);
     }

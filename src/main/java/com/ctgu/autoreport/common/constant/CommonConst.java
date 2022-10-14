@@ -7,4 +7,6 @@ package com.ctgu.autoreport.common.constant;
 public class CommonConst {
     public static final Integer SERVICE_ERROR = 50000;
     public static final Integer LOGIN_FAILED = 10000;
+
+    public static final String AUTO_REPORT = "auto_report:";
 }

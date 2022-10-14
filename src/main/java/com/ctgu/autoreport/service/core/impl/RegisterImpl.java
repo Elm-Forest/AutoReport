@@ -8,13 +8,13 @@ import com.ctgu.autoreport.common.vo.Result;
 import com.ctgu.autoreport.common.vo.UserVO;
 import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
+import com.ctgu.autoreport.service.common.RedisService;
 import com.ctgu.autoreport.service.core.Register;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.ctgu.autoreport.common.constant.CommonConst.LOGIN_FAILED;
-import static com.ctgu.autoreport.common.constant.CommonConst.SERVICE_ERROR;
+import static com.ctgu.autoreport.common.constant.CommonConst.*;
 import static com.ctgu.autoreport.common.enums.StatusCodeEnum.SYSTEM_ERROR;
 
 /**
@@ -26,10 +26,23 @@ public class RegisterImpl implements Register {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private RedisService redisService;
+
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Result<?> register(UserVO userVO) {
+        if (redisService.get(AUTO_REPORT + userVO.getUsername()) != null) {
+            return Result.fail("请勿重复提交！");
+        }
+        redisService.set(AUTO_REPORT + userVO.getUsername(), userVO.getUsername(), 60);
+        Result<?> result = registerCore(userVO);
+        redisService.del(AUTO_REPORT + userVO.getUsername());
+        return result;
+    }
 
+    @Transactional(rollbackFor = Exception.class)
+    Result<?> registerCore(UserVO userVO) {
         if (!checkExists(userVO.getUsername())) {
             return Result.fail(StatusCodeEnum.EXISTED);
         }
