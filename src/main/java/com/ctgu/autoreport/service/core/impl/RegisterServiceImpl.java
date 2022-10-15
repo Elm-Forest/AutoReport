@@ -12,6 +12,7 @@ import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.common.RedisService;
 import com.ctgu.autoreport.service.core.RegisterService;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ import static com.ctgu.autoreport.common.enums.StatusCodeEnum.SYSTEM_ERROR;
  * @date 14/10/2022 下午3:05
  */
 @Service
+@Log4j2
 public class RegisterServiceImpl implements RegisterService {
     @Autowired
     private UserMapper userMapper;
@@ -95,7 +97,6 @@ public class RegisterServiceImpl implements RegisterService {
                 .password(userVO.getPassword())
                 .email(userVO.getEmail())
                 .build();
-        System.out.println(user);
         ServiceDTO serviceDTO = checkLogin(user);
         if (!serviceDTO.getFlag()) {
             if (serviceDTO.getCode().equals(LOGIN_FAILED)) {
@@ -135,6 +136,7 @@ public class RegisterServiceImpl implements RegisterService {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+        log.info(userVO.getUsername() + "已完成注册");
         return Result.ok();
     }
 

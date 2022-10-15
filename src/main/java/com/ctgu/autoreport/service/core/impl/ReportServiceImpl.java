@@ -1,14 +1,19 @@
 package com.ctgu.autoreport.service.core.impl;
 
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ctgu.autoreport.common.dto.EmailDTO;
+import com.ctgu.autoreport.common.dto.JsonDTO;
 import com.ctgu.autoreport.common.dto.ServiceDTO;
 import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.core.ReportService;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +30,7 @@ import static java.lang.Thread.sleep;
  * @date 13/10/2022 下午6:48
  */
 @Service
+@Log4j2
 public class ReportServiceImpl implements ReportService {
     @Autowired
     private UserMapper userMapper;
@@ -56,7 +62,10 @@ public class ReportServiceImpl implements ReportService {
                 }
                 System.out.println("登陆成功！");
                 sleep(2000);
-                summit();
+                String token = getToken(getFormList());
+                List<JsonDTO> historyList = getHistoryList();
+                String summit = summit(token, historyList.get(2));
+                System.out.println(summit);
                 System.out.println("已完成请求");
                 sleep(1000);
                 logout();
@@ -66,20 +75,14 @@ public class ReportServiceImpl implements ReportService {
                 throw new RuntimeException(e);
             }
         }
+        log.info("已完成该轮次请求");
     }
 
     void autoDelete(String username) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
-        int delete = userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         try {
-            mailService.sendMail(EmailDTO.builder()
-                    .email(user.getEmail())
-                    .subject("CTGU自动安全上报系统账户移除通知")
-                    .content("您的账号" + user.getUsername() + "<br>登录至安全上报服务器失败，现已被移除</br>" +
-                            "如果您向继续使用，请访问以下地址进行重新注册:<br>http://120.25.3.27</br>" +
-                            "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" +
-                            "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>")
-                    .build());
+            mailService.sendMail(EmailDTO.builder().email(user.getEmail()).subject("CTGU自动安全上报系统账户移除通知").content("您的账号" + user.getUsername() + "<br>登录至安全上报服务器失败，现已被移除</br>" + "如果您向继续使用，请访问以下地址进行重新注册:<br>http://120.25.3.27</br>" + "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" + "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>").build());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -95,43 +98,58 @@ public class ReportServiceImpl implements ReportService {
             result = HttpRequest.post(url).headerMap(HEADER_MAP, false).form(paramMap).timeout(30000).execute();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            return ServiceDTO.builder()
-                    .flag(false)
-                    .code(SERVICE_ERROR)
-                    .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，可能是安全上报服务器目前宕机，也可能是本平台ip地址遭受安全上报服务器封锁")
-                    .build();
+            return ServiceDTO.builder().flag(false).code(SERVICE_ERROR).message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，可能是安全上报服务器目前宕机，也可能是本平台ip地址遭受安全上报服务器封锁").build();
         }
         assert result != null;
         if ("success".equals(result.body())) {
-            return ServiceDTO.builder()
-                    .flag(true).build();
+            return ServiceDTO.builder().flag(true).build();
         } else {
-            return ServiceDTO.builder()
-                    .flag(false)
-                    .code(LOGIN_FAILED)
-                    .message("您的账号登录至安全上报服务器失败，请检查重试！")
-                    .build();
+            return ServiceDTO.builder().flag(false).code(LOGIN_FAILED).message("您的账号登录至安全上报服务器失败，请检查重试！").build();
         }
     }
 
-    String summit() {
+    String getToken(String body) {
+        String token = ReUtil.get("<input type=\"hidden\" name=\"ttoken\" value=\"(.*?)\"/", body, 1);
+        if (token != null) {
+            System.out.println("随机token:" + token);
+        } else {
+            System.out.println("自动上报时抓取token失败");
+        }
+        return token;
+    }
+
+    public String getFormList() {
+        String url = "http://yiqing.ctgu.edu.cn/wx/health/toApply.do";
+        url = "http://yiqing.ctgu.edu.cn/wx/health/editApply.do";
+        HttpResponse execute = HttpRequest.get(url).headerMap(HEADER_MAP, false).timeout(30000).execute();
+        return execute.body();
+    }
+
+    public List<JsonDTO> getHistoryList() {
+        String url = "http://yiqing.ctgu.edu.cn/wx/health/studentHis.do";
+        String historyList = HttpRequest.post(url).execute().body();
+        JSONArray array = JSONUtil.parseArray(historyList);
+        return JSONUtil.toList(array, JsonDTO.class);
+    }
+
+    String summit(String token, JsonDTO jsonDTO) {
         HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("ttoken", "08956857-2b52-4f80-b52e-f3f543e3a00d");
-        paramMap.put("province", "湖北");
-        paramMap.put("city", "宜昌市");
-        paramMap.put("district", "西陵区");
-        paramMap.put("adcode", "443000");
-        paramMap.put("longitude", "111");
-        paramMap.put("latitude", "31");
+        paramMap.put("ttoken", token);
+        paramMap.put("province", jsonDTO.getProvince());
+        paramMap.put("city", jsonDTO.getCity());
+        paramMap.put("district", jsonDTO.getDistrict());
+        paramMap.put("adcode", jsonDTO.getAdcode());
+        paramMap.put("longitude", "0");
+        paramMap.put("latitude", "0");
         paramMap.put("sfqz", "否");
         paramMap.put("sfys", "否");
         paramMap.put("sfzy", "否");
         paramMap.put("sfgl", "否");
         paramMap.put("status", "1");
-        paramMap.put("szdz", "湖北省 宜昌市 西陵区");
-        paramMap.put("sjh", "15071169163");
-        paramMap.put("lxrxm", "");
-        paramMap.put("lxrsjh", "");
+        paramMap.put("szdz", jsonDTO.getSzdz());
+        paramMap.put("sjh", jsonDTO.getSjh());
+        paramMap.put("lxrxm", jsonDTO.getLxrxm());
+        paramMap.put("lxrsjh", jsonDTO.getLxrsjh());
         paramMap.put("sffr", "否");
         paramMap.put("sffrAm:", "否");
         paramMap.put("sffrNoon", "否");
@@ -146,7 +164,6 @@ public class ReportServiceImpl implements ReportService {
         paramMap.put("qt", "");
         HEADER_MAP.put("Referer", "http://yiqing.ctgu.edu.cn/wx/health/toApply.do");
         HttpResponse result = HttpRequest.post("http://yiqing.ctgu.edu.cn/wx/health/saveApply.do").headerMap(HEADER_MAP, false).form(paramMap).timeout(20000).execute();
-        System.out.println(result.body());
         return result.body();
     }
 
