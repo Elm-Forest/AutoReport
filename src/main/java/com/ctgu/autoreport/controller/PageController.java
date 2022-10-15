@@ -13,4 +13,9 @@ public class PageController {
     public String index() {
         return "index";
     }
+
+    @RequestMapping("/delete")
+    public String delete() {
+        return "delete";
+    }
 }

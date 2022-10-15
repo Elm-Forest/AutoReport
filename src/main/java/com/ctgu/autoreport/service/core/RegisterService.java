@@ -8,6 +8,8 @@ import com.ctgu.autoreport.common.vo.UserVO;
  * @author Elm Forest
  * @date 14/10/2022 下午3:05
  */
-public interface Register {
+public interface RegisterService {
     Result<?> register(UserVO userVO);
+
+    Result<?> delete(UserVO userVO);
 }

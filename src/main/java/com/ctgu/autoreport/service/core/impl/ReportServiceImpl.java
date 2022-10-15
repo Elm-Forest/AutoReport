@@ -2,10 +2,13 @@ package com.ctgu.autoreport.service.core.impl;
 
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ctgu.autoreport.common.dto.EmailDTO;
 import com.ctgu.autoreport.common.dto.ServiceDTO;
 import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
-import com.ctgu.autoreport.service.core.Report;
+import com.ctgu.autoreport.service.common.MailService;
+import com.ctgu.autoreport.service.core.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,10 +25,12 @@ import static java.lang.Thread.sleep;
  * @date 13/10/2022 下午6:48
  */
 @Service
-public class ReportImpl implements Report {
+public class ReportServiceImpl implements ReportService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private MailService mailService;
     private static final Map<String, String> HEADER_MAP = new HashMap<>();
 
     @Override
@@ -43,6 +48,10 @@ public class ReportImpl implements Report {
                 System.out.println("当前用户:" + user.getUsername());
                 if (!serviceDTO.getFlag()) {
                     System.out.println("登陆失败！");
+                    if (serviceDTO.getCode().equals(LOGIN_FAILED)) {
+                        autoDelete(user.getUsername());
+                        System.out.println("已自动删除" + user);
+                    }
                     continue;
                 }
                 System.out.println("登陆成功！");
@@ -56,6 +65,23 @@ public class ReportImpl implements Report {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    void autoDelete(String username) {
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        int delete = userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        try {
+            mailService.sendMail(EmailDTO.builder()
+                    .email(user.getEmail())
+                    .subject("CTGU自动安全上报系统账户移除通知")
+                    .content("您的账号" + user.getUsername() + "<br>登录至安全上报服务器失败，现已被移除</br>" +
+                            "如果您向继续使用，请访问以下地址进行重新注册:<br>http://120.25.3.27</br>" +
+                            "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" +
+                            "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>")
+                    .build());
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 
@@ -90,7 +116,7 @@ public class ReportImpl implements Report {
 
     String summit() {
         HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("ttoken", "23afa6eb-8770-408b-8f9d-95d886729b24");
+        paramMap.put("ttoken", "08956857-2b52-4f80-b52e-f3f543e3a00d");
         paramMap.put("province", "湖北");
         paramMap.put("city", "宜昌市");
         paramMap.put("district", "西陵区");

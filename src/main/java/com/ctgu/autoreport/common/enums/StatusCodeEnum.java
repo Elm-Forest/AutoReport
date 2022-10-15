@@ -17,7 +17,8 @@ public enum StatusCodeEnum {
     /**
      * 没有操作权限
      */
-    EXISTED(30100, "用户已存在"),
+    EXISTED(40100, "用户已存在"),
+    NO_EXISTED(40200, "用户不存在"),
 
     LOGIN_FAILED(30200, "登陆失败"),
 
