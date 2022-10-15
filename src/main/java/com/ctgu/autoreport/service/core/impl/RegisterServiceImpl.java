@@ -61,6 +61,7 @@ public class RegisterServiceImpl implements RegisterService {
     @Transactional(rollbackFor = Exception.class)
     Result<?> deleteCore(UserVO userVO) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, userVO.getUsername()));
+        System.out.println(user);
         if (user == null) {
             return Result.fail(StatusCodeEnum.NO_EXISTED);
         }

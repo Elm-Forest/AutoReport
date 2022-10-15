@@ -34,18 +34,18 @@
         <el-col :xs="{span:24,offset:0}" :sm="{span:16,offset:4}" :md="{span:7,offset:9}">
             <el-card class="box-card">
                 <h2 id="login-title">CTGU自动上报</h2>
-                <el-form id="form" ref="loginFormRef" :model="loginForm">
-                    <el-form-item prop="name">
+                <el-form id="form" ref="loginFormRef" :model="loginForm" :rules="loginFormRules">
+                    <el-form-item prop="username">
                         <el-input prefix-icon="el-icon-user-solid" v-model="loginForm.username" placeholder="学号"
-                                  clearable></el-input>
+                                  minlength="1" clearable></el-input>
                     </el-form-item>
-                    <el-form-item prop="sex">
+                    <el-form-item prop="password">
                         <el-input prefix-icon="el-icon-data-board" v-model="loginForm.password" placeholder="密码"
-                                  clearable></el-input>
+                                  minlength="1" show-password clearable></el-input>
                     </el-form-item>
-                    <el-form-item prop="address">
+                    <el-form-item prop="email">
                         <el-input prefix-icon="el-icon-s-cooperation" v-model="loginForm.email" placeholder="邮箱"
-                                  clearable></el-input>
+                                  minlength='2' required clearable></el-input>
                     </el-form-item>
                     <el-button type="primary" @click="createDept">提交</el-button>
                 </el-form>
@@ -74,50 +74,76 @@
                     username: '',
                     password: '',
                     email: '',
-                }
+                },
+                loginFormRules: {
+                    username: [
+                        {required: true, message: '请输入用户名', trigger: 'blur'},
+                        {min: 1, max: 18, message: '不能为空', trigger: 'blur'}
+                    ],
+                    password: [
+                        {required: true, message: '请输入密码', trigger: 'blur'},
+                        {min: 1, max: 30, message: '不能为空', trigger: 'blur'}
+                    ],
+                    email: [
+                        {required: true, message: '请输入正确的邮箱格式', trigger: 'blur'},
+                        {
+                            pattern: /^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+(.[a-zA-Z0-9_-])+/,
+                            message: '请输入正确的邮箱格式',
+                            trigger: 'blur'
+                        }
+                    ]
+                },
             }
         }, methods: {
             aboutMe() {
-                window.location.href = "https://github.com/Elm-Forest"
+                window.location.href = "https://github.com/Elm-Forest/AutoReport"
             },
             deleteAccount() {
                 window.location.href = "/delete"
             },
             createDept() {
-                const this_vue = this;
-                this_vue.$message({
-                    message: "您已成功提交信息，正在登录至CTGU安全上报系统，请耐心等待，最多等待30s将返回结果",
-                    duration: 8 * 1000,
-                    type: 'success'
-                });
-                this.$axios({
-                    method: 'post',
-                    url: '/api/register',
-                    data: {
-                        'username': this.loginForm.username,
-                        'password': this.loginForm.password,
-                        'email': this.loginForm.email,
-                    }
-                }).then(res => {
-                    if (!res.data.flag) {
+                this.$refs.loginFormRef.validate((e)=>{
+                    if(e){
+                        const this_vue = this;
+                        this_vue.$message.closeAll()
                         this_vue.$message({
-                            message: res.data.message,
-                            duration: 8 * 1000,
-                            type: 'warning'
-                        });
-                    } else {
-                        this_vue.$message({
-                            message: "注册成功！每天8点到13点每隔一个小时将尝试自动安全上报",
+                            message: "您已成功提交信息，正在登录至CTGU安全上报系统，请耐心等待，最多等待30s将返回结果",
                             duration: 8 * 1000,
                             type: 'success'
                         });
+                        this.$axios({
+                            method: 'post',
+                            url: '/api/register',
+                            data: {
+                                'username': this.loginForm.username,
+                                'password': this.loginForm.password,
+                                'email': this.loginForm.email,
+                            }
+                        }).then(res => {
+                            if (!res.data.flag) {
+                                this_vue.$message.closeAll()
+                                this_vue.$message({
+                                    message: res.data.message,
+                                    duration: 8 * 1000,
+                                    type: 'warning'
+                                });
+                            } else {
+                                this_vue.$message.closeAll()
+                                this_vue.$message({
+                                    message: "注册成功！每天8点到13点每隔一个小时将尝试自动安全上报",
+                                    duration: 8 * 1000,
+                                    type: 'success'
+                                });
+                            }
+                        }).catch(e => {
+                            this_vue.$message.closeAll()
+                            this_vue.$message({
+                                message: "与服务器连接异常,请检查网络连接或联系服务器管理员，异常信息为：" + e,
+                                duration: 8 * 1000,
+                                type: 'error'
+                            });
+                        })
                     }
-                }).catch(e => {
-                    this_vue.$message({
-                        message: "与服务器连接异常,请检查网络连接或联系服务器管理员，异常信息为：" + e,
-                        duration: 8 * 1000,
-                        type: 'error'
-                    });
                 })
             }
         }
