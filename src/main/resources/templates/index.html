@@ -94,7 +94,20 @@
                     ]
                 },
             }
-        }, methods: {
+        }, mounted() {
+            this.$alert('<li>本项目仅用于学习用途，完全开源且非盈利</br>' +
+                '<li>您须保证您完全遵守疫情防控规定</br>' +
+                '<li>在使用本系统期间您必须处在校内，如果您离校，请主动删除账号</br>' +
+                '<li>由于个人原因造成疫情扩散等恶劣情景，作者不承担任何责任</br>' +
+                '<li>继续使用即代表您同意上述条约，否则自行关闭该页面。', '使用条约', {
+                confirmButtonText: '同意',
+                dangerouslyUseHTMLString: true,
+            });
+        },
+        methods: {
+            open() {
+
+            },
             aboutMe() {
                 window.location.href = "https://github.com/Elm-Forest/AutoReport"
             },
@@ -102,8 +115,8 @@
                 window.location.href = "/delete"
             },
             createDept() {
-                this.$refs.loginFormRef.validate((e)=>{
-                    if(e){
+                this.$refs.loginFormRef.validate((e) => {
+                    if (e) {
                         const this_vue = this;
                         this_vue.$message.closeAll()
                         this_vue.$message({
