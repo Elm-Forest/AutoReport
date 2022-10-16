@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.ctgu.autoreport.common.constant.CommonConst.*;
+import static com.ctgu.autoreport.common.utils.AesUtils.decryptAes;
 
 
 /**
@@ -132,7 +133,7 @@ public class ReportServiceImpl implements ReportService {
         String url = "http://yiqing.ctgu.edu.cn/wx/index/loginSubmit.do";
         HashMap<String, Object> paramMap = new HashMap<>();
         paramMap.put("username", user.getUsername());
-        paramMap.put("password", user.getPassword());
+        paramMap.put("password", decryptAes(user.getPassword()));
         HttpResponse result;
         try {
             result = HttpRequest.post(url).headerMap(HEADER_MAP, false).form(paramMap).timeout(30000).execute();

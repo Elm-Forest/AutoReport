@@ -22,6 +22,7 @@ import javax.mail.MessagingException;
 
 import static com.ctgu.autoreport.common.constant.CommonConst.*;
 import static com.ctgu.autoreport.common.enums.StatusCodeEnum.SYSTEM_ERROR;
+import static com.ctgu.autoreport.common.utils.AesUtils.encryptAes;
 
 /**
  * @author Elm Forest
@@ -99,7 +100,7 @@ public class RegisterServiceImpl implements RegisterService {
         }
         User user = User.builder()
                 .username(userVO.getUsername())
-                .password(userVO.getPassword())
+                .password(encryptAes(userVO.getPassword()))
                 .email(userVO.getEmail())
                 .build();
         ServiceDTO serviceDTO = checkLogin(user);
