@@ -19,5 +19,7 @@ public class ServiceDTO {
 
     private Integer code;
 
+    private String data;
+
     private String message;
 }

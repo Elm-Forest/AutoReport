@@ -12,6 +12,7 @@ import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.common.RedisService;
 import com.ctgu.autoreport.service.core.RegisterService;
+import com.ctgu.autoreport.service.core.ReportService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,9 @@ public class RegisterServiceImpl implements RegisterService {
     @Autowired
     private MailService mailService;
 
+    @Autowired
+    private ReportService reportService;
+
     @Override
     public Result<?> register(UserVO userVO) {
         if (redisService.get(AUTO_REPORT + userVO.getUsername()) != null) {
@@ -45,6 +49,7 @@ public class RegisterServiceImpl implements RegisterService {
         }
         redisService.set(AUTO_REPORT + userVO.getUsername(), userVO.getUsername(), 60);
         Result<?> result = registerCore(userVO);
+
         redisService.del(AUTO_REPORT + userVO.getUsername());
         return result;
     }
@@ -136,8 +141,15 @@ public class RegisterServiceImpl implements RegisterService {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
-        log.info(userVO.getUsername() + "已完成注册");
-        return Result.ok();
+        serviceDTO = reportService.reportCore(user);
+        String msg = "已完成注册，";
+        if (serviceDTO.getFlag()) {
+            msg += "今日已上报";
+        } else {
+            msg += "但当前上报未能完成，可能原因是此账号今日已自主上报";
+        }
+        log.info(userVO.getUsername() + msg + serviceDTO);
+        return Result.ok(null, msg);
     }
 
     boolean checkExists(String username) {
