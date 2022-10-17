@@ -142,7 +142,7 @@ public class ReportServiceImpl implements ReportService {
             return ServiceDTO.builder()
                     .flag(false)
                     .code(SERVICE_ERROR)
-                    .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，可能是安全上报服务器目前宕机，也可能是本平台ip地址遭受安全上报服务器封锁").build();
+                    .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，很大概率是目前安全上报服务器已关机，您可以自行打开安全上报公众号查看页面是否可以打开\n存在一定可能是本平台ip地址遭受安全上报服务器封锁").build();
         }
         assert result != null;
         if ("success".equals(result.body())) {
