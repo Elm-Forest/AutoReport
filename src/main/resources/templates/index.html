@@ -31,7 +31,7 @@
 
 <div id="app">
     <el-row :gutter="10">
-        <el-col :xs="{span:24,offset:0}" :sm="{span:16,offset:4}" :md="{span:7,offset:9}">
+        <el-col :xs="{span:24,offset:0}" :sm="{span:16,offset:4}" :md="{span:6,offset:9}">
             <el-card class="box-card">
                 <h2 id="login-title">CTGU自动上报</h2>
                 <el-form id="form" ref="loginFormRef" :model="loginForm" :rules="loginFormRules">
@@ -121,7 +121,7 @@
                         this_vue.$message.closeAll()
                         this_vue.$message({
                             message: "您已成功提交信息，正在登录至CTGU安全上报系统，请耐心等待，最多等待30s将返回结果",
-                            duration: 8 * 1000,
+                            duration: 30 * 1000,
                             type: 'success'
                         });
                         this.$axios({
