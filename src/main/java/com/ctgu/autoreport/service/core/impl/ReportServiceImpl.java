@@ -15,6 +15,7 @@ import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.common.RedisService;
+import com.ctgu.autoreport.common.utils.AesUtils;
 import com.ctgu.autoreport.service.core.ReportService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.ctgu.autoreport.common.constant.CommonConst.*;
-import static com.ctgu.autoreport.common.utils.AesUtils.decryptAes;
 
 
 /**
@@ -37,6 +37,9 @@ import static com.ctgu.autoreport.common.utils.AesUtils.decryptAes;
 public class ReportServiceImpl implements ReportService {
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private AesUtils aesUtils;
 
     @Autowired
     private MailService mailService;
@@ -129,11 +132,12 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    @Override
     public ServiceDTO login(User user) {
         String url = "http://yiqing.ctgu.edu.cn/wx/index/loginSubmit.do";
         HashMap<String, Object> paramMap = new HashMap<>();
         paramMap.put("username", user.getUsername());
-        paramMap.put("password", decryptAes(user.getPassword()));
+        paramMap.put("password", aesUtils.decryptAes(user.getPassword()));
         HttpResponse result;
         try {
             result = HttpRequest.post(url).headerMap(HEADER_MAP, false).form(paramMap).timeout(30000).execute();
@@ -142,7 +146,7 @@ public class ReportServiceImpl implements ReportService {
             return ServiceDTO.builder()
                     .flag(false)
                     .code(SERVICE_ERROR)
-                    .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，很大概率是目前安全上报服务器已关机，您可以自行打开安全上报公众号查看页面是否可以打开\n存在一定可能是本平台ip地址遭受安全上报服务器封锁").build();
+                    .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，很大概率是目前安全上报服务器已关机，您可以自行打开安全上报公众号查看页面是否可以加载。如果正常加载，本平台ip地址可能已遭受安全上报服务器封锁").build();
         }
         assert result != null;
         if ("success".equals(result.body())) {
