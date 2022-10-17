@@ -63,3 +63,18 @@ spring:
           starttls:
             enable: true
             required: true
+  redis:
+    database: 2
+    host: # url
+    port: 6379
+    username: # username
+    password: # password
+    timeout: 1000
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1
+        max-idle: 8
+        min-idle: 0
+aes:
+  key: # private key

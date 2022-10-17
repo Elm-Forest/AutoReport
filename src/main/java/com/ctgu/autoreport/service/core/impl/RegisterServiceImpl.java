@@ -11,6 +11,7 @@ import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.common.RedisService;
+import com.ctgu.autoreport.common.utils.AesUtils;
 import com.ctgu.autoreport.service.core.RegisterService;
 import com.ctgu.autoreport.service.core.ReportService;
 import lombok.extern.log4j.Log4j2;
@@ -22,7 +23,6 @@ import javax.mail.MessagingException;
 
 import static com.ctgu.autoreport.common.constant.CommonConst.*;
 import static com.ctgu.autoreport.common.enums.StatusCodeEnum.SYSTEM_ERROR;
-import static com.ctgu.autoreport.common.utils.AesUtils.encryptAes;
 
 /**
  * @author Elm Forest
@@ -39,6 +39,9 @@ public class RegisterServiceImpl implements RegisterService {
 
     @Autowired
     private MailService mailService;
+
+    @Autowired
+    private AesUtils aesUtils;
 
     @Autowired
     private ReportService reportService;
@@ -100,10 +103,10 @@ public class RegisterServiceImpl implements RegisterService {
         }
         User user = User.builder()
                 .username(userVO.getUsername())
-                .password(encryptAes(userVO.getPassword()))
+                .password(aesUtils.encryptAes(userVO.getPassword()))
                 .email(userVO.getEmail())
                 .build();
-        ServiceDTO serviceDTO = checkLogin(user);
+        ServiceDTO serviceDTO = reportService.login(user);
         if (!serviceDTO.getFlag()) {
             if (serviceDTO.getCode().equals(LOGIN_FAILED)) {
                 return Result.fail(serviceDTO.getMessage());
@@ -113,6 +116,17 @@ public class RegisterServiceImpl implements RegisterService {
                     if (insert <= 0) {
                         throw new BizException("注册异常");
                     }
+                    mailService.sendMail(EmailDTO.builder()
+                            .email(user.getEmail())
+                            .subject("欢迎注册CTGU自动安全上报系统")
+                            .content("您的账号" + user.getUsername() + "已完成本系统注册<p>但是由于安全上报服务器异常，未能验证您输入表单的正确性</p>" +
+                                    "<br>您可以自行前往安全上报公众号，检查页面是否可以加载</br>" +
+                                    "注意：本系统仅用于学习用途，您须保证您完全遵守疫情防控规定，在使用本系统期间您必须处在校内，如果您离校，请主动删除账号" +
+                                    "<br>继续使用即代表您同意该条约，由于个人原因造成疫情扩散等违规违法情形，作者不承担任何责任</br>" +
+                                    "<br>本系统完全保护且不收集您的个人信息，数据采用AES对称加密算法存储。如果您决定停止使用，系统会删除有关您的所有信息</br>" +
+                                    "<br>本项目开源且完全非盈利，开源地址：https://github.com/Elm-Forest/AutoReport</br>" +
+                                    "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和机器学习等任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
+                            .build());
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
                     return Result.fail(SYSTEM_ERROR);
@@ -134,10 +148,10 @@ public class RegisterServiceImpl implements RegisterService {
                     .subject("欢迎注册CTGU自动安全上报系统")
                     .content("您的账号" + user.getUsername() + "<br>已成功登录至安全上报服务器，并完成本系统注册</br>" +
                             "注意：本系统仅用于学习用途，您须保证您完全遵守疫情防控规定，在使用本系统期间您必须处在校内，如果您离校，请主动删除账号" +
-                            "<br>继续使用即代表您同意该条约，由于个人原因造成疫情扩散等恶劣情景，作者不承担任何责任</br>" +
+                            "<br>继续使用即代表您同意该条约，由于个人原因造成疫情扩散等违规违法情形，作者不承担任何责任</br>" +
                             "<br>本系统完全保护且不收集您的个人信息，数据采用AES对称加密算法存储。如果您决定停止使用，系统会删除有关您的所有信息</br>" +
                             "<br>本系统开源且完全非盈利，开源地址：https://github.com/Elm-Forest/AutoReport</br>" +
-                            "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和深度学习任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
+                            "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和机器学习等任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
                     .build());
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -156,9 +170,5 @@ public class RegisterServiceImpl implements RegisterService {
     boolean checkExists(String username) {
         Object user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         return user == null;
-    }
-
-    ServiceDTO checkLogin(User user) {
-        return new ReportServiceImpl().login(user);
     }
 }

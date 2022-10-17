@@ -11,4 +11,6 @@ public interface ReportService {
     void report();
 
     ServiceDTO reportCore(User user);
+
+    ServiceDTO login(User user);
 }
