@@ -48,7 +48,7 @@ public class ReportServiceImpl implements ReportService {
     private RedisService redisService;
     private static final Map<String, String> HEADER_MAP = new HashMap<>();
 
-    ReportServiceImpl() {
+    public ReportServiceImpl() {
         HEADER_MAP.put("Accept", "*/*");
         HEADER_MAP.put("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6,ja;q=0.5");
         HEADER_MAP.put("User-Agent", "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2224.3");
@@ -126,7 +126,12 @@ public class ReportServiceImpl implements ReportService {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         try {
-            mailService.sendMail(EmailDTO.builder().email(user.getEmail()).subject("CTGU自动安全上报系统账户移除通知").content("您的账号" + user.getUsername() + "<br>登录至安全上报服务器失败，现已被移除</br>" + "如果您向继续使用，请访问以下地址进行重新注册:<br>http://120.25.3.27</br>" + "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" + "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>").build());
+            mailService.sendMail(EmailDTO.builder().email(user.getEmail()).subject("CTGU自动安全上报系统:提供错误的账号或者密码").content("你好" + user.getUsername() +
+                    "<br>你似乎提供错误的账号或者密码，请求登录安全上报服务器后返回的结果为：" +
+                    "<br>用户名或密码输入错误！</br>" +
+                    "您的账号现已被自动移除</br>" +
+                    "如果您打算继续使用，请访问以下地址进行重新注册:<br>http://120.25.3.27</br>" +
+                    "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" + "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>").build());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -151,12 +156,19 @@ public class ReportServiceImpl implements ReportService {
         assert result != null;
         if ("success".equals(result.body())) {
             return ServiceDTO.builder().flag(true).build();
-        } else {
+        } else if ("fail".equals(result.body())) {
+            System.out.println("response:" + result.body());
             return ServiceDTO.builder().flag(false).code(LOGIN_FAILED).message("您的账号登录至安全上报服务器失败，请检查重试！").build();
+        } else {
+            return ServiceDTO.builder()
+                    .flag(false)
+                    .code(SERVICE_ERROR)
+                    .message("您的账号已录入自动上报数据库，且与安全上报服务器取得联系，但是未能验证您输入表单的正确性").build();
+
         }
     }
 
-    ServiceDTO getToken(String body) {
+    public ServiceDTO getToken(String body) {
         String token = ReUtil.get("<input type=\"hidden\" name=\"ttoken\" value=\"(.*?)\"/", body, 1);
         ServiceDTO serviceDTO;
         if (token != null) {
