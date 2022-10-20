@@ -1,7 +1,7 @@
 package com.ctgu.autoreport.service.core.impl;
 
-import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.http.ContentType;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONArray;
@@ -11,11 +11,11 @@ import com.ctgu.autoreport.common.dto.EmailDTO;
 import com.ctgu.autoreport.common.dto.JsonDTO;
 import com.ctgu.autoreport.common.dto.ServiceDTO;
 import com.ctgu.autoreport.common.exception.BizException;
+import com.ctgu.autoreport.common.utils.AesUtils;
 import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.common.RedisService;
-import com.ctgu.autoreport.common.utils.AesUtils;
 import com.ctgu.autoreport.service.core.ReportService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.ctgu.autoreport.common.constant.CommonConst.*;
 
@@ -51,7 +52,7 @@ public class ReportServiceImpl implements ReportService {
     public ReportServiceImpl() {
         HEADER_MAP.put("Accept", "*/*");
         HEADER_MAP.put("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6,ja;q=0.5");
-        HEADER_MAP.put("User-Agent", "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2224.3");
+        HEADER_MAP.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36");
         HEADER_MAP.put("Cookie", "_hjid=d2e89115-fce8-406e-9100-43d5e0583b90; _ga=GA1.3.1877050853.1635668836; _sp_id.e13e=239c0ebd-cc15-4eb1-83cf-21d68aa5eec3.1635668335.2.1635910905.1635668824.ebf4064b-164b-4811-a5ab-d64ed9744368; _vwo_uuid=DF8316058656E6E9EF4002DA48A68BF24; sensorsdata2015jssdkcross=%7B%22distinct_id%22%3A%2217d238163c6518-05ec00257e12b7-a7d173c-1327104-17d238163c710e9%22%2C%22first_id%22%3A%22%22%2C%22props%22%3A%7B%7D%2C%22%24device_id%22%3A%2217d238163c6518-05ec00257e12b7-a7d173c-1327104-17d238163c710e9%22%7D; JSESSIONID=456C3D97B20DDDFF3C8FB0B148CEEEB8");
     }
 
@@ -62,7 +63,6 @@ public class ReportServiceImpl implements ReportService {
         for (User user : users) {
             ServiceDTO serviceDTO = reportCore(user);
             System.out.println(serviceDTO);
-            ThreadUtil.sleep(5000);
         }
         log.info("已完成该轮次请求");
     }
@@ -71,7 +71,7 @@ public class ReportServiceImpl implements ReportService {
     public ServiceDTO reportCore(User user) {
         try {
             if (redisService.get(REPORTED_SUCCESS + user.getUsername()) != null) {
-                throw new BizException("今日已上报");
+                throw new BizException("已上报");
             }
             HEADER_MAP.put("Referer", "http://yiqing.ctgu.edu.cn/wx/index/login.do?showWjdc=false&studentShowWjdc=false&currSchool=ctgu&CURRENT_YEAR=2019");
             HEADER_MAP.put("Origin", "Origin: http://yiqing.ctgu.edu.cn");
@@ -88,8 +88,17 @@ public class ReportServiceImpl implements ReportService {
                 throw new BizException(msg);
             }
             System.out.println("登陆成功！");
-            ThreadUtil.sleep(1000);
-            ServiceDTO tokenService = getToken(getFormList());
+            ServiceDTO reported = isReported();
+            if (!reported.getFlag()) {
+                redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
+                throw new BizException(reported.getMessage());
+            }
+            System.out.println("关键字：" + reported.getMessage());
+            String formList = getFormList();
+            if (formList == null || "".equals(formList)) {
+                throw new BizException("表单获取失败！");
+            }
+            ServiceDTO tokenService = getToken(formList);
             if (!tokenService.getFlag()) {
                 throw new BizException(tokenService.getMessage());
             }
@@ -104,7 +113,6 @@ public class ReportServiceImpl implements ReportService {
             }
             System.out.println(summit);
             System.out.println("已完成请求");
-            ThreadUtil.sleep(1000);
             logout();
             System.out.println("已登出！");
             redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
@@ -114,6 +122,7 @@ public class ReportServiceImpl implements ReportService {
                     .data(summit)
                     .build();
         } catch (Exception e) {
+            logout();
             return ServiceDTO.builder()
                     .flag(false)
                     .message(e.getMessage())
@@ -145,7 +154,12 @@ public class ReportServiceImpl implements ReportService {
         paramMap.put("password", aesUtils.decryptAes(user.getPassword()));
         HttpResponse result;
         try {
-            result = HttpRequest.post(url).headerMap(HEADER_MAP, false).form(paramMap).timeout(30000).execute();
+            result = HttpRequest.post(url)
+                    .headerMap(HEADER_MAP, false)
+                    .contentType(ContentType.MULTIPART.getValue())
+                    .form(paramMap)
+                    .timeout(30000)
+                    .execute();
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return ServiceDTO.builder()
@@ -178,6 +192,7 @@ public class ReportServiceImpl implements ReportService {
                     .data(token)
                     .build();
         } else {
+            System.out.println(body);
             serviceDTO = ServiceDTO.builder()
                     .flag(false)
                     .message("自动上报时抓取token失败")
@@ -189,7 +204,12 @@ public class ReportServiceImpl implements ReportService {
 
     public String getFormList() {
         String url = "http://yiqing.ctgu.edu.cn/wx/health/toApply.do";
-        HttpResponse execute = HttpRequest.get(url).headerMap(HEADER_MAP, false).timeout(30000).execute();
+        HttpResponse execute = HttpRequest.get(url)
+                .headerMap(HEADER_MAP, false)
+                .timeout(30000).execute();
+        if (Objects.equals(execute.body(), "")) {
+            System.out.println(execute.getStatus());
+        }
         return execute.body();
     }
 
@@ -200,6 +220,23 @@ public class ReportServiceImpl implements ReportService {
         return JSONUtil.toList(array, JsonDTO.class);
     }
 
+    public ServiceDTO isReported() {
+        String url = "http://yiqing.ctgu.edu.cn/wx/health/main.do";
+        String index = HttpRequest.get(url).execute().body();
+        String keyword = ReUtil.get("<span class=\"normal-sm-tip green-warn fn-ml10\">(.*?)</span>", index, 1);
+        if (Objects.equals(keyword, "今日已上报")) {
+            return ServiceDTO.builder()
+                    .flag(false)
+                    .message(keyword)
+                    .build();
+        } else {
+            return ServiceDTO.builder()
+                    .flag(true)
+                    .message(keyword)
+                    .build();
+        }
+    }
+
     String summit(String token, JsonDTO jsonDTO) {
         HashMap<String, Object> paramMap = new HashMap<>();
         paramMap.put("ttoken", token);
@@ -207,8 +244,8 @@ public class ReportServiceImpl implements ReportService {
         paramMap.put("city", jsonDTO.getCity());
         paramMap.put("district", jsonDTO.getDistrict());
         paramMap.put("adcode", jsonDTO.getAdcode());
-        paramMap.put("longitude", "0");
-        paramMap.put("latitude", "0");
+        paramMap.put("longitude", jsonDTO.getLongitude());
+        paramMap.put("latitude", jsonDTO.getLatitude());
         paramMap.put("sfqz", "否");
         paramMap.put("sfys", "否");
         paramMap.put("sfzy", "否");
@@ -218,18 +255,18 @@ public class ReportServiceImpl implements ReportService {
         paramMap.put("sjh", jsonDTO.getSjh());
         paramMap.put("lxrxm", jsonDTO.getLxrxm());
         paramMap.put("lxrsjh", jsonDTO.getLxrsjh());
-        paramMap.put("sffr", "否");
-        paramMap.put("sffrAm:", "否");
-        paramMap.put("sffrNoon", "否");
-        paramMap.put("sffrPm", "否");
-        paramMap.put("sffy", "否");
-        paramMap.put("sfgr", "否");
-        paramMap.put("qzglsj", "");
-        paramMap.put("qzgldd", "");
-        paramMap.put("glyy", "");
-        paramMap.put("mqzz", "");
-        paramMap.put("sffx", "否");
-        paramMap.put("qt", "");
+        paramMap.put("sffr", jsonDTO.getSffr());
+        paramMap.put("sffrAm:", jsonDTO.getSffrAm());
+        paramMap.put("sffrNoon", jsonDTO.getSffrNoon());
+        paramMap.put("sffrPm", jsonDTO.getSffrPm());
+        paramMap.put("sffy", jsonDTO.getSffy());
+        paramMap.put("sfgr", jsonDTO.getSfgr());
+        paramMap.put("qzglsj", jsonDTO.getQzglsj());
+        paramMap.put("qzgldd", jsonDTO.getQzgldd());
+        paramMap.put("glyy", jsonDTO.getGlyy());
+        paramMap.put("mqzz", jsonDTO.getMqzz());
+        paramMap.put("sffx", jsonDTO.getSffx());
+        paramMap.put("qt", jsonDTO.getSffr());
         System.out.println(paramMap);
         HEADER_MAP.put("Referer", "http://yiqing.ctgu.edu.cn/wx/health/toApply.do");
         HttpResponse result = HttpRequest.post("http://yiqing.ctgu.edu.cn/wx/health/saveApply.do").headerMap(HEADER_MAP, false).form(paramMap).timeout(20000).execute();
