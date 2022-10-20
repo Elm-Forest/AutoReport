@@ -17,4 +17,18 @@ public class JsonDTO {
     private String sjh;
     private String lxrsjh;
     private String lxrxm;
+    private String longitude;
+    private String latitude;
+    private String sffr;
+    private String sffrAm;
+    private String sffrNoon;
+    private String sffrPm;
+    private String sffy;
+    private String sfgr;
+    private String qzglsj;
+    private String qzgldd;
+    private String glyy;
+    private String mqzz;
+    private String sffx;
+    private String qt;
 }
