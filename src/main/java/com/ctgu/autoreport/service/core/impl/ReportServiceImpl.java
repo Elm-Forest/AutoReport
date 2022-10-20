@@ -117,7 +117,7 @@ public class ReportServiceImpl implements ReportService {
             System.out.println("已登出！");
             redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
             return ServiceDTO.builder()
-                    .flag(false)
+                    .flag(true)
                     .message("已成功完成安全上报")
                     .data(summit)
                     .build();
