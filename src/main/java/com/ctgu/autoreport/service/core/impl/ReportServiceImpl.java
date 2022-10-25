@@ -222,8 +222,25 @@ public class ReportServiceImpl implements ReportService {
 
     public ServiceDTO isReported() {
         String url = "http://yiqing.ctgu.edu.cn/wx/health/main.do";
+        String tzsUrl = "http://yiqing.ctgu.edu.cn/home/changeRole.do?current_roleid=student";
         String index = HttpRequest.get(url).execute().body();
         String keyword = ReUtil.get("<span class=\"normal-sm-tip green-warn fn-ml10\">(.*?)</span>", index, 1);
+        if (keyword == null) {
+            HttpRequest.get(tzsUrl).execute().body();
+            index = HttpRequest.get(url).execute().body();
+            keyword = ReUtil.get("<span class=\"normal-sm-tip green-warn fn-ml10\">(.*?)</span>", index, 1);
+            if (Objects.equals(keyword, "今日已上报")) {
+                return ServiceDTO.builder()
+                        .flag(false)
+                        .message(keyword)
+                        .build();
+            } else {
+                return ServiceDTO.builder()
+                        .flag(true)
+                        .message(keyword)
+                        .build();
+            }
+        }
         if (Objects.equals(keyword, "今日已上报")) {
             return ServiceDTO.builder()
                     .flag(false)
