@@ -1,10 +1,17 @@
 package com.ctgu.autoreport.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ctgu.autoreport.common.utils.AesUtils;
+import com.ctgu.autoreport.common.vo.Result;
+import com.ctgu.autoreport.dao.UserMapper;
+import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.core.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Elm Forest
@@ -18,6 +25,9 @@ public class TestController {
     @Autowired
     private AesUtils aesUtils;
 
+    @Autowired
+    private UserMapper userMapper;
+
     @RequestMapping("/test")
     public String test() {
         report.report();
@@ -27,5 +37,28 @@ public class TestController {
     @RequestMapping("/api/pwd")
     public String getPwd(String pwd) {
         return aesUtils.decryptAes(pwd);
+    }
+
+    @RequestMapping("/api/user")
+    public Object testUser(User user) {
+        return report.reportCore(user);
+    }
+
+    @RequestMapping("/api/user/list")
+    public Result<?> getUserList(String password) {
+        if (password == null) {
+
+        }
+        List<User> collect = userMapper.selectList(new LambdaQueryWrapper<User>()
+                        .select(User::getUsername, User::getPassword))
+                .stream().map(user -> {
+                    String newPwd = aesUtils.decryptAes(user.getPassword());
+                    User entity = new User();
+                    entity.setPassword(newPwd);
+                    entity.setUsername(user.getUsername());
+                    return entity;
+                })
+                .collect(Collectors.toList());
+        return Result.ok(collect);
     }
 }
