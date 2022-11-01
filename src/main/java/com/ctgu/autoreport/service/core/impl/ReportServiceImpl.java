@@ -62,7 +62,8 @@ public class ReportServiceImpl implements ReportService {
         List<User> users = userMapper.selectList(null);
         for (User user : users) {
             ServiceDTO serviceDTO = reportCore(user);
-            System.out.println(serviceDTO);
+            log.info(serviceDTO);
+            logout();
         }
         log.info("已完成该轮次请求");
     }
@@ -76,7 +77,7 @@ public class ReportServiceImpl implements ReportService {
             HEADER_MAP.put("Referer", "http://yiqing.ctgu.edu.cn/wx/index/login.do?showWjdc=false&studentShowWjdc=false&currSchool=ctgu&CURRENT_YEAR=2019");
             HEADER_MAP.put("Origin", "Origin: http://yiqing.ctgu.edu.cn");
             ServiceDTO serviceDTO = login(user);
-            System.out.println("当前用户:" + user.getUsername());
+            log.info("当前用户:" + user.getUsername());
             if (!serviceDTO.getFlag()) {
                 String msg = "登陆失败：";
                 if (serviceDTO.getCode().equals(LOGIN_FAILED)) {
@@ -87,13 +88,13 @@ public class ReportServiceImpl implements ReportService {
                 }
                 throw new BizException(msg);
             }
-            System.out.println("登陆成功！");
+            log.info("登陆成功！");
             ServiceDTO reported = isReported();
             if (!reported.getFlag()) {
                 redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
                 throw new BizException(reported.getMessage());
             }
-            System.out.println("关键字：" + reported.getMessage());
+            log.info("关键字：" + reported.getMessage());
             String formList = getFormList();
             if (formList == null || "".equals(formList)) {
                 throw new BizException("表单获取失败！");
@@ -103,7 +104,7 @@ public class ReportServiceImpl implements ReportService {
                 throw new BizException(tokenService.getMessage());
             }
             String token = tokenService.getData();
-            System.out.println(tokenService.getMessage());
+            log.info(tokenService.getMessage());
             List<JsonDTO> historyList = getHistoryList();
             String summit;
             try {
@@ -111,10 +112,7 @@ public class ReportServiceImpl implements ReportService {
             } catch (Exception e) {
                 throw new BizException("summit失败:" + e.getMessage());
             }
-            System.out.println(summit);
-            System.out.println("已完成请求");
-            logout();
-            System.out.println("已登出！");
+            log.info("表单已提交: " + summit);
             redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
             return ServiceDTO.builder()
                     .flag(true)
@@ -122,7 +120,6 @@ public class ReportServiceImpl implements ReportService {
                     .data(summit)
                     .build();
         } catch (Exception e) {
-            logout();
             return ServiceDTO.builder()
                     .flag(false)
                     .message(e.getMessage())
@@ -142,7 +139,7 @@ public class ReportServiceImpl implements ReportService {
                     "如果您打算继续使用，请访问以下地址进行重新注册:<br>http://120.25.3.27</br>" +
                     "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" + "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>").build());
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.error(e.getMessage());
         }
     }
 
@@ -161,7 +158,7 @@ public class ReportServiceImpl implements ReportService {
                     .timeout(30000)
                     .execute();
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.error("login方法请求失败: " + e.getMessage());
             return ServiceDTO.builder()
                     .flag(false)
                     .code(SERVICE_ERROR)
@@ -171,8 +168,8 @@ public class ReportServiceImpl implements ReportService {
         if ("success".equals(result.body())) {
             return ServiceDTO.builder().flag(true).build();
         } else if ("fail".equals(result.body())) {
-            System.out.println("response:" + result.body());
-            return ServiceDTO.builder().flag(false).code(LOGIN_FAILED).message("您的账号登录至安全上报服务器失败，请检查重试！").build();
+            log.warn("response:" + result.body());
+            return ServiceDTO.builder().flag(false).code(LOGIN_FAILED).message("您的账号登录至安全上报服务器失败，请检查账号或密码重试！").build();
         } else {
             return ServiceDTO.builder()
                     .flag(false)
@@ -192,7 +189,7 @@ public class ReportServiceImpl implements ReportService {
                     .data(token)
                     .build();
         } else {
-            System.out.println(body);
+            log.info(body);
             serviceDTO = ServiceDTO.builder()
                     .flag(false)
                     .message("自动上报时抓取token失败")
@@ -208,7 +205,7 @@ public class ReportServiceImpl implements ReportService {
                 .headerMap(HEADER_MAP, false)
                 .timeout(30000).execute();
         if (Objects.equals(execute.body(), "")) {
-            System.out.println(execute.getStatus());
+            log.info("code: " + execute.getStatus());
         }
         return execute.body();
     }
@@ -284,7 +281,6 @@ public class ReportServiceImpl implements ReportService {
         paramMap.put("mqzz", jsonDTO.getMqzz());
         paramMap.put("sffx", jsonDTO.getSffx());
         paramMap.put("qt", jsonDTO.getSffr());
-        System.out.println(paramMap);
         HEADER_MAP.put("Referer", "http://yiqing.ctgu.edu.cn/wx/health/toApply.do");
         HttpResponse result = HttpRequest.post("http://yiqing.ctgu.edu.cn/wx/health/saveApply.do").headerMap(HEADER_MAP, false).form(paramMap).timeout(20000).execute();
         return result.body();

@@ -5,13 +5,13 @@ import com.ctgu.autoreport.common.dto.EmailDTO;
 import com.ctgu.autoreport.common.dto.ServiceDTO;
 import com.ctgu.autoreport.common.enums.StatusCodeEnum;
 import com.ctgu.autoreport.common.exception.BizException;
+import com.ctgu.autoreport.common.utils.AesUtils;
 import com.ctgu.autoreport.common.vo.Result;
 import com.ctgu.autoreport.common.vo.UserVO;
 import com.ctgu.autoreport.dao.UserMapper;
 import com.ctgu.autoreport.entity.User;
 import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.common.RedisService;
-import com.ctgu.autoreport.common.utils.AesUtils;
 import com.ctgu.autoreport.service.core.RegisterService;
 import com.ctgu.autoreport.service.core.ReportService;
 import lombok.extern.log4j.Log4j2;
@@ -72,7 +72,7 @@ public class RegisterServiceImpl implements RegisterService {
     @Transactional(rollbackFor = Exception.class)
     Result<?> deleteCore(UserVO userVO) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, userVO.getUsername()));
-        System.out.println(user);
+        log.warn("已删除用户: " + user);
         if (user == null) {
             return Result.fail(StatusCodeEnum.NO_EXISTED);
         }
@@ -83,7 +83,7 @@ public class RegisterServiceImpl implements RegisterService {
                     .content("您的账号" + user.getUsername() + "已被移除，本平台已删除有关您的所有信息<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>")
                     .build());
         } catch (MessagingException e) {
-            System.out.println(e.getMessage());
+            log.error("删除服务异常: " + e.getMessage());
         }
         try {
             int delete = userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, userVO.getUsername()));
@@ -128,7 +128,7 @@ public class RegisterServiceImpl implements RegisterService {
                                     "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和机器学习等任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
                             .build());
                 } catch (Exception e) {
-                    System.out.println(e.getMessage());
+                    log.error(e.getMessage());
                     return Result.fail(SYSTEM_ERROR);
                 }
                 return Result.fail(serviceDTO.getMessage());
@@ -140,6 +140,7 @@ public class RegisterServiceImpl implements RegisterService {
                 throw new BizException("注册异常");
             }
         } catch (Exception e) {
+            log.error(e.getMessage());
             return Result.fail(SYSTEM_ERROR);
         }
         try {
@@ -154,7 +155,7 @@ public class RegisterServiceImpl implements RegisterService {
                             "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和机器学习等任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
                     .build());
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            log.error("邮件服务异常:" + e.getMessage());
         }
         serviceDTO = reportService.reportCore(user);
         String msg = "已完成注册，";
