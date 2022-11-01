@@ -3,6 +3,7 @@ package com.ctgu.autoreport.service.common.impl;
 import com.ctgu.autoreport.common.dto.EmailDTO;
 import com.ctgu.autoreport.service.common.MailService;
 import lombok.Data;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -21,6 +22,7 @@ import javax.mail.internet.MimeMessage;
 @Data
 @Service
 @EnableAsync
+@Log4j2
 public class MailServiceImpl implements MailService {
 
     @Autowired
@@ -38,8 +40,8 @@ public class MailServiceImpl implements MailService {
         helper.setText(emailDTO.getContent(), true);
         helper.setTo(emailDTO.getEmail());
         helper.setFrom(hostMail);
-        System.out.println("正在发送邮件至" + emailDTO.getEmail());
+        log.info("正在发送邮件至" + emailDTO.getEmail());
         mailSender.send(mimeMessage);
-        System.out.println("已发送");
+        log.info("已发送");
     }
 }
