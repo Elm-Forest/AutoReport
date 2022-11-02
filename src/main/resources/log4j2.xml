@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 主要配置为error日志与debug日志分别打印文件，errorLog按照分钟存档，debugLog按照日志文件大小存档，最多保存10个。 -->
+<!-- 日志打印状态为debug， monitorInterval是用来设置配置文件的动态加载时间的，每30秒配置文件会动态加载一次，修改配置30秒会生效-->
+<configuration status="debug" monitorInterval="30">
+    <Properties>
+        <!-- baseLogDir变量名，日志存储路径。logPattern日志打印路径 -->
+        <property name="baseLogDir">./app/log</property>
+        <!-- 格式化输出：%d格式化日期，%-5level：级别从左显示5个字符宽度，%thread表示线程名，%msg：日志消息，%n是换行符 -->
+        <property name="logPattern">%d{yyyy-MM-dd} %-5level [%logger{0}:%line][%thread] %X{logger_id} - [TID: %X{EagleEye-TraceID}] %msg%n</property>
+    </Properties>
+
+    <Appenders>
+        <!--Appender 1. console输出DEBUG级别以上日志，指定输出格式和过滤器等级为DEBUG -->
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${logPattern}"/>
+            <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+
+        <!--Appender 2. INFO日志保存到app.log文件,日志留3天 -->
+        <RollingFile name="business" fileName="${baseLogDir}/app.log"
+                     filePattern="${baseLogDir}/app.log.%d{yyyy-MM-dd}">
+            <PatternLayout pattern="${logPattern}"/>
+            <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+            <CronTriggeringPolicy schedule="0 0 0 * * ?"/>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${baseLogDir}" maxDepth="2">
+                    <IfFileName glob="app.log.20*" />
+                    <IfLastModified age="3d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <!--Appender 3. DEBUG日志保存到debug.log文件,日志留3天 -->
+        <RollingFile name="debug" fileName="${baseLogDir}/debug.log"
+                     filePattern="${baseLogDir}/debug.log.%d{yyyy-MM-dd}">
+            <PatternLayout pattern="${logPattern}"/>
+            <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
+            <CronTriggeringPolicy schedule="0 0 0 * * ?"/>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${baseLogDir}" maxDepth="2">
+                    <IfFileName glob="debug.log.20*" />
+                    <IfLastModified age="3d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <!--Appender 4. ERROR日志保存到error.log文件,日志留3天 -->
+        <RollingFile name="error" fileName="${baseLogDir}/error.log"
+                     filePattern="${baseLogDir}/error.log.%d{yyyy-MM-dd}">
+            <PatternLayout pattern="${logPattern}"/>
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <CronTriggeringPolicy schedule="0 0 0 * * ?"/>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${baseLogDir}" maxDepth="2">
+                    <IfFileName glob="error.log.20*" />
+                    <IfLastModified age="3d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <AsyncRoot level="info" includeLocation="true">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="business"/>
+            <AppenderRef ref="debug"/>
+            <AppenderRef ref="error"/>
+        </AsyncRoot>
+    </Loggers>
+</configuration>

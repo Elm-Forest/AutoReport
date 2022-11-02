@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -44,10 +45,16 @@ public class TestController {
         return report.reportCore(user);
     }
 
+    @RequestMapping("/api/test")
+    public String testApi() {
+        report.reportByApi();
+        return "hello world";
+    }
+
     @RequestMapping("/api/user/list")
     public Result<?> getUserList(String password) {
-        if (password == null) {
-
+        if (!Objects.equals(password, "123456")) {
+            return Result.fail("no permission!");
         }
         List<User> collect = userMapper.selectList(new LambdaQueryWrapper<User>()
                         .select(User::getUsername, User::getPassword))

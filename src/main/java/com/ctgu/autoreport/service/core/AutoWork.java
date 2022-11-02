@@ -27,13 +27,14 @@ public class AutoWork {
     @Autowired
     private UserMapper userMapper;
 
-    @Scheduled(cron = "30 0-15 8 * * ?")
+    @Scheduled(cron = "0 1-10 8 * * ?")
     void autoReport() {
-        report.report();
+        report.reportByApi();
     }
+
     @Scheduled(cron = "0 0-3 9-10 * * ?")
-    void autoReportV2(){
-        report.report();
+    void autoReportV2() {
+        report.reportByApi();
     }
 
     @Scheduled(cron = "0 0 3 * * ?")

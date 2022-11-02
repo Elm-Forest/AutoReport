@@ -175,8 +175,12 @@ public class ReportServiceImpl implements ReportService {
                     .flag(false)
                     .code(SERVICE_ERROR)
                     .message("您的账号已录入自动上报数据库，且与安全上报服务器取得联系，但是未能验证您输入表单的正确性").build();
-
         }
+    }
+
+    @Override
+    public void reportByApi() {
+        HttpRequest.get("http://127.0.0.1:8080/test").execute().body();
     }
 
     public ServiceDTO getToken(String body) {
