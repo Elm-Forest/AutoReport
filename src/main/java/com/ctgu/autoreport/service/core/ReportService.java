@@ -30,4 +30,6 @@ public interface ReportService {
      * @return ServiceDTO 服务传输载体
      */
     ServiceDTO login(User user);
+
+    void reportByApi();
 }
