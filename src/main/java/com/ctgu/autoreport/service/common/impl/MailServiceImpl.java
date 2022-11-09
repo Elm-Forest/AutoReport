@@ -44,4 +44,19 @@ public class MailServiceImpl implements MailService {
         mailSender.send(mimeMessage);
         log.info("已发送");
     }
+
+    @Override
+    public void sendMailWithSync(EmailDTO emailDTO) throws MessagingException {
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+        helper.setSubject(emailDTO.getSubject());
+        helper.setText(emailDTO.getContent(), true);
+        helper.setTo(emailDTO.getEmail());
+        helper.setFrom(hostMail);
+        log.info("正在发送邮件至" + emailDTO.getEmail());
+        mailSender.send(mimeMessage);
+        log.info("已发送");
+    }
+
+
 }

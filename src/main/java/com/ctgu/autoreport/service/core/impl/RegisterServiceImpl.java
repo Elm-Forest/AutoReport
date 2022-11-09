@@ -72,7 +72,7 @@ public class RegisterServiceImpl implements RegisterService {
     @Transactional(rollbackFor = Exception.class)
     Result<?> deleteCore(UserVO userVO) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, userVO.getUsername()));
-        log.warn("已删除用户: " + user);
+        log.warn("删除用户: " + user);
         if (user == null) {
             return Result.fail(StatusCodeEnum.NO_EXISTED);
         }
@@ -83,7 +83,7 @@ public class RegisterServiceImpl implements RegisterService {
                     .content("您的账号" + user.getUsername() + "已被移除，本平台已删除有关您的所有信息<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>")
                     .build());
         } catch (MessagingException e) {
-            log.error("删除服务异常: " + e.getMessage());
+            log.error("邮件服务发生异常: " + e.getMessage());
         }
         try {
             int delete = userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, userVO.getUsername()));
@@ -101,6 +101,7 @@ public class RegisterServiceImpl implements RegisterService {
         if (!checkExists(userVO.getUsername())) {
             return Result.fail(StatusCodeEnum.EXISTED);
         }
+        log.info("注册用户:" + userVO.getUsername());
         User user = User.builder()
                 .username(userVO.getUsername())
                 .password(aesUtils.encryptAes(userVO.getPassword()))
@@ -114,7 +115,7 @@ public class RegisterServiceImpl implements RegisterService {
                 try {
                     int insert = userMapper.insert(user);
                     if (insert <= 0) {
-                        throw new BizException("注册异常");
+                        throw new BizException("注册发生异常,user字段插入失败:insert <= 0");
                     }
                     mailService.sendMail(EmailDTO.builder()
                             .email(user.getEmail())
@@ -137,7 +138,7 @@ public class RegisterServiceImpl implements RegisterService {
         try {
             int insert = userMapper.insert(user);
             if (insert <= 0) {
-                throw new BizException("注册异常");
+                throw new BizException("注册发生异常,user字段插入失败:insert <= 0");
             }
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -155,7 +156,7 @@ public class RegisterServiceImpl implements RegisterService {
                             "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和机器学习等任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
                     .build());
         } catch (Exception e) {
-            log.error("邮件服务异常:" + e.getMessage());
+            log.error("邮件服务抛出异常:" + e.getMessage());
         }
         serviceDTO = reportService.reportCore(user);
         String msg = "已完成注册，";

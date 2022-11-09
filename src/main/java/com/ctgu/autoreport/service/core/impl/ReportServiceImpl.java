@@ -19,6 +19,7 @@ import com.ctgu.autoreport.service.common.RedisService;
 import com.ctgu.autoreport.service.core.ReportService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -44,9 +45,12 @@ public class ReportServiceImpl implements ReportService {
 
     @Autowired
     private MailService mailService;
-
     @Autowired
     private RedisService redisService;
+
+    @Value("${server.port}")
+    private String port;
+
     private static final Map<String, String> HEADER_MAP = new HashMap<>();
 
     public ReportServiceImpl() {
@@ -62,7 +66,7 @@ public class ReportServiceImpl implements ReportService {
         List<User> users = userMapper.selectList(null);
         for (User user : users) {
             ServiceDTO serviceDTO = reportCore(user);
-            log.info(serviceDTO);
+            log.info("flag:" + serviceDTO.getFlag() + ",message:" + serviceDTO.getMessage());
             logout();
         }
         log.info("已完成该轮次请求");
@@ -72,7 +76,7 @@ public class ReportServiceImpl implements ReportService {
     public ServiceDTO reportCore(User user) {
         try {
             if (redisService.get(REPORTED_SUCCESS + user.getUsername()) != null) {
-                throw new BizException("已上报");
+                throw new BizException(user.getUsername() + "已上报");
             }
             HEADER_MAP.put("Referer", "http://yiqing.ctgu.edu.cn/wx/index/login.do?showWjdc=false&studentShowWjdc=false&currSchool=ctgu&CURRENT_YEAR=2019");
             HEADER_MAP.put("Origin", "Origin: http://yiqing.ctgu.edu.cn");
@@ -94,7 +98,7 @@ public class ReportServiceImpl implements ReportService {
                 redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
                 throw new BizException(reported.getMessage());
             }
-            log.info("关键字：" + reported.getMessage());
+            log.info("正则匹配截取的结果为：" + reported.getMessage());
             String formList = getFormList();
             if (formList == null || "".equals(formList)) {
                 throw new BizException("表单获取失败！");
@@ -110,7 +114,7 @@ public class ReportServiceImpl implements ReportService {
             try {
                 summit = summit(token, historyList.get(2));
             } catch (Exception e) {
-                throw new BizException("summit失败:" + e.getMessage());
+                throw new BizException("summit抛出异常:" + e.getMessage());
             }
             log.info("表单已提交: " + summit);
             redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
@@ -132,11 +136,11 @@ public class ReportServiceImpl implements ReportService {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         try {
-            mailService.sendMail(EmailDTO.builder().email(user.getEmail()).subject("CTGU自动安全上报系统:提供错误的账号或者密码").content("你好" + user.getUsername() +
+            mailService.sendMailWithSync(EmailDTO.builder().email(user.getEmail()).subject("CTGU自动安全上报系统:提供错误的账号或者密码").content("你好" + user.getUsername() +
                     "<br>你似乎提供错误的账号或者密码，请求登录安全上报服务器后返回的结果为：" +
                     "<br>用户名或密码输入错误！</br>" +
                     "您的账号现已被自动移除</br>" +
-                    "如果您打算继续使用，请访问以下地址进行重新注册:<br>http://120.25.3.27</br>" +
+                    "如果您打算继续使用，请访问以下地址进行重新注册:<br>http://101.132.249.251:6633</br>" +
                     "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" + "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>").build());
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -168,7 +172,7 @@ public class ReportServiceImpl implements ReportService {
         if ("success".equals(result.body())) {
             return ServiceDTO.builder().flag(true).build();
         } else if ("fail".equals(result.body())) {
-            log.warn("response:" + result.body());
+            log.warn("登录失败，返回的结果为:" + result.body());
             return ServiceDTO.builder().flag(false).code(LOGIN_FAILED).message("您的账号登录至安全上报服务器失败，请检查账号或密码重试！").build();
         } else {
             return ServiceDTO.builder()
@@ -180,7 +184,8 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public void reportByApi() {
-        HttpRequest.get("http://127.0.0.1:8080/test").execute().body();
+        System.out.println(port);
+        HttpRequest.get("http://127.0.0.1:" + port + "/test").execute().body();
     }
 
     public ServiceDTO getToken(String body) {
@@ -189,14 +194,14 @@ public class ReportServiceImpl implements ReportService {
         if (token != null) {
             serviceDTO = ServiceDTO.builder()
                     .flag(true)
-                    .message("随机token:" + token)
+                    .message("成功抓取token:" + token)
                     .data(token)
                     .build();
         } else {
             log.info(body);
             serviceDTO = ServiceDTO.builder()
                     .flag(false)
-                    .message("自动上报时抓取token失败")
+                    .message("抓取token失败！")
                     .data(null)
                     .build();
         }
@@ -209,7 +214,7 @@ public class ReportServiceImpl implements ReportService {
                 .headerMap(HEADER_MAP, false)
                 .timeout(30000).execute();
         if (Objects.equals(execute.body(), "")) {
-            log.info("code: " + execute.getStatus());
+            log.info("请求异常,code = " + execute.getStatus());
         }
         return execute.body();
     }
