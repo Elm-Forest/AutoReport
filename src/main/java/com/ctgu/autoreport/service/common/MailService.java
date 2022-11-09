@@ -19,4 +19,6 @@ public interface MailService {
      * @throws MessagingException 消息异常
      */
     void sendMail(EmailDTO emailDTO) throws MessagingException;
+
+    void sendMailWithSync(EmailDTO emailDTO) throws MessagingException;
 }
