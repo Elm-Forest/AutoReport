@@ -70,13 +70,13 @@ public class ReportServiceImpl implements ReportService {
     public void report() {
         log.info("开始执行该轮次");
         List<User> users = userMapper.selectList(null);
-        redisService.set(REDIS_LOGIN_FAILED, 0);
+        redisService.set(REDIS_LOGIN_FAILED, 1);
         for (User user : users) {
             ServiceDTO serviceDTO = reportCore(user);
             log.info(serviceDTO.getFlag() ? "成功！" : "失败！" + "详细信息:" + serviceDTO.getMessage());
             logout();
         }
-        redisService.set(REDIS_LOGIN_FAILED, 0);
+        redisService.set(REDIS_LOGIN_FAILED, 1);
         log.info("已完成该轮次请求");
     }
 
@@ -93,7 +93,7 @@ public class ReportServiceImpl implements ReportService {
             if (!serviceDTO.getFlag()) {
                 String msg = "登陆失败：";
                 if (serviceDTO.getCode().equals(LOGIN_FAILED)) {
-                    Integer failNumber = (Integer) redisService.get(REDIS_LOGIN_FAILED);
+                    int failNumber = (int) redisService.get(REDIS_LOGIN_FAILED);
                     if (failNumber <= LOGIN_FAILED_LIMIT) {
                         autoDelete(user.getUsername());
                         redisService.set(REDIS_LOGIN_FAILED, failNumber + 1);
