@@ -51,6 +51,9 @@ public class ReportServiceImpl implements ReportService {
     @Value("${server.port}")
     private String port;
 
+    @Value("${spring.mail.username}")
+    private String hostMail;
+
     private static final Map<String, String> HEADER_MAP = new HashMap<>();
 
     public ReportServiceImpl() {
@@ -66,7 +69,7 @@ public class ReportServiceImpl implements ReportService {
         List<User> users = userMapper.selectList(null);
         for (User user : users) {
             ServiceDTO serviceDTO = reportCore(user);
-            log.info("flag:" + serviceDTO.getFlag() + ",message:" + serviceDTO.getMessage());
+            log.info("flag:" + (serviceDTO.getFlag() ? "成功！" : "失败！") + ",message:" + serviceDTO.getMessage());
             logout();
         }
         log.info("已完成该轮次请求");
@@ -98,7 +101,21 @@ public class ReportServiceImpl implements ReportService {
                 redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
                 throw new BizException(reported.getMessage());
             }
-            log.info("正则匹配截取的结果为：" + reported.getMessage());
+            if (reported.getMessage() != null) {
+                log.info("正则匹配截取成功，但结果不为空为：" + reported.getMessage());
+                log.error("严重级别错误，对象业务发生更改，发现此消息应当及时联系开发者！");
+                try {
+                    mailService.sendMailWithSync(EmailDTO.builder()
+                            .email(hostMail)
+                            .subject("AutoReport项目发生严重错误")
+                            .content("此消息系AutoReport项目自动发出</br>" +
+                                    "com.ctgu.autoreport.ReportServiceImpl.reportCore</br>" +
+                                    "正则匹配截取成功，但结果不为空为" + reported.getMessage() + "</br>").build());
+                } catch (Exception e) {
+                    log.error(e.getMessage());
+                }
+                throw new BizException("发生严重错误！");
+            }
             String formList = getFormList();
             if (formList == null || "".equals(formList)) {
                 throw new BizException("表单获取失败！");
