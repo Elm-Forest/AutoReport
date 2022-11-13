@@ -51,6 +51,9 @@ public class ReportServiceImpl implements ReportService {
     @Value("${server.port}")
     private String port;
 
+    @Value("${localhost}")
+    private String localhost;
+
     @Value("${spring.mail.username}")
     private String hostMail;
 
@@ -67,11 +70,13 @@ public class ReportServiceImpl implements ReportService {
     public void report() {
         log.info("开始执行该轮次");
         List<User> users = userMapper.selectList(null);
+        redisService.set(REDIS_LOGIN_FAILED, 0);
         for (User user : users) {
             ServiceDTO serviceDTO = reportCore(user);
-            log.info("flag:" + (serviceDTO.getFlag() ? "成功！" : "失败！") + ",message:" + serviceDTO.getMessage());
+            log.info(serviceDTO.getFlag() ? "成功！" : "失败！" + "详细信息:" + serviceDTO.getMessage());
             logout();
         }
+        redisService.set(REDIS_LOGIN_FAILED, 0);
         log.info("已完成该轮次请求");
     }
 
@@ -88,8 +93,15 @@ public class ReportServiceImpl implements ReportService {
             if (!serviceDTO.getFlag()) {
                 String msg = "登陆失败：";
                 if (serviceDTO.getCode().equals(LOGIN_FAILED)) {
-                    autoDelete(user.getUsername());
-                    msg = msg + "已自动删除" + user;
+                    Integer failNumber = (Integer) redisService.get(REDIS_LOGIN_FAILED);
+                    if (failNumber <= LOGIN_FAILED_LIMIT) {
+                        autoDelete(user.getUsername());
+                        redisService.set(REDIS_LOGIN_FAILED, failNumber + 1);
+                        msg = msg + "已自动删除" + user;
+                    } else {
+                        msg = msg + "账号或者密码错误,自动删除已达上限！";
+                        log.warn("自动删除达到上限时，当前用户:" + user);
+                    }
                 } else {
                     msg = msg + "服务器未应答";
                 }
@@ -167,6 +179,8 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public ServiceDTO login(User user) {
         String url = "http://yiqing.ctgu.edu.cn/wx/index/loginSubmit.do";
+        String successFlag = "success";
+        String failFlag = "fail";
         HashMap<String, Object> paramMap = new HashMap<>();
         paramMap.put("username", user.getUsername());
         paramMap.put("password", aesUtils.decryptAes(user.getPassword()));
@@ -186,12 +200,22 @@ public class ReportServiceImpl implements ReportService {
                     .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，很大概率是目前安全上报服务器已关机，您可以自行打开安全上报公众号查看页面是否可以加载。如果正常加载，本平台ip地址可能已遭受安全上报服务器封锁").build();
         }
         assert result != null;
-        if ("success".equals(result.body())) {
+        if (successFlag.equals(result.body())) {
             return ServiceDTO.builder().flag(true).build();
-        } else if ("fail".equals(result.body())) {
+        } else if (failFlag.equals(result.body())) {
             log.warn("登录失败，返回的结果为:" + result.body());
             return ServiceDTO.builder().flag(false).code(LOGIN_FAILED).message("您的账号登录至安全上报服务器失败，请检查账号或密码重试！").build();
         } else {
+            try {
+                mailService.sendMailWithSync(EmailDTO.builder()
+                        .email(hostMail)
+                        .subject("AutoReport项目发生错误")
+                        .content("login方法返回结果异常，对象业务可能已经发生更改</br>" +
+                                "请求登录后,响应体为:" + result.body() + "</br>" +
+                                "请求的客户为:" + user.getUsername() + "," + aesUtils.decryptAes(user.getPassword())).build());
+            } catch (Exception e) {
+                log.error("在执行login方法时，邮件服务抛出异常:" + e.getMessage());
+            }
             return ServiceDTO.builder()
                     .flag(false)
                     .code(SERVICE_ERROR)
@@ -201,8 +225,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public void reportByApi() {
-        System.out.println(port);
-        HttpRequest.get("http://127.0.0.1:" + port + "/test").execute().body();
+        HttpRequest.get("http://" + localhost + ":" + port + "/test").execute().body();
     }
 
     public ServiceDTO getToken(String body) {
@@ -246,13 +269,14 @@ public class ReportServiceImpl implements ReportService {
     public ServiceDTO isReported() {
         String url = "http://yiqing.ctgu.edu.cn/wx/health/main.do";
         String tzsUrl = "http://yiqing.ctgu.edu.cn/home/changeRole.do?current_roleid=student";
+        String reportedFlag = "今日已上报";
         String index = HttpRequest.get(url).execute().body();
         String keyword = ReUtil.get("<span class=\"normal-sm-tip green-warn fn-ml10\">(.*?)</span>", index, 1);
         if (keyword == null) {
             HttpRequest.get(tzsUrl).execute().body();
             index = HttpRequest.get(url).execute().body();
             keyword = ReUtil.get("<span class=\"normal-sm-tip green-warn fn-ml10\">(.*?)</span>", index, 1);
-            if (Objects.equals(keyword, "今日已上报")) {
+            if (Objects.equals(keyword, reportedFlag)) {
                 return ServiceDTO.builder()
                         .flag(false)
                         .message(keyword)
@@ -264,7 +288,7 @@ public class ReportServiceImpl implements ReportService {
                         .build();
             }
         }
-        if (Objects.equals(keyword, "今日已上报")) {
+        if (Objects.equals(keyword, reportedFlag)) {
             return ServiceDTO.builder()
                     .flag(false)
                     .message(keyword)
