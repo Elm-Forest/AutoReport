@@ -69,11 +69,18 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public void report() {
         log.info("开始执行该轮次");
+        if ((int) redisService.get(REPORTED_NUMS) == 0) {
+            log.warn("今日上报已完成");
+            return;
+        }
         List<User> users = userMapper.selectList(null);
         redisService.set(REDIS_LOGIN_FAILED, 1);
         for (User user : users) {
             ServiceDTO serviceDTO = reportCore(user);
             log.info(serviceDTO.getFlag() ? "成功！" : "失败！" + "详细信息:" + serviceDTO.getMessage());
+            if (serviceDTO.getFlag()) {
+                redisService.set(REPORTED_NUMS, (int) redisService.get(REPORTED_NUMS) - 1);
+            }
             logout();
         }
         redisService.set(REDIS_LOGIN_FAILED, 1);
@@ -111,7 +118,10 @@ public class ReportServiceImpl implements ReportService {
             ServiceDTO reported = isReported();
             if (!reported.getFlag()) {
                 redisService.set(REPORTED_SUCCESS + user.getUsername(), user.getUsername());
-                throw new BizException(reported.getMessage());
+                return ServiceDTO.builder()
+                        .flag(true)
+                        .message("今日已自主上报！")
+                        .build();
             }
             if (reported.getMessage() != null) {
                 log.info("正则匹配截取成功，但结果不为空为：" + reported.getMessage());

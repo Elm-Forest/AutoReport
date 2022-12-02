@@ -13,4 +13,6 @@ public class CommonConst {
     public static final String REDIS_LOGIN_FAILED = "login_failed:";
 
     public static final Integer LOGIN_FAILED_LIMIT = 2;
+
+    public static final String REPORTED_NUMS = "report_nums:";
 }

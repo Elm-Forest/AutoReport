@@ -161,7 +161,8 @@ public class RegisterServiceImpl implements RegisterService {
         serviceDTO = reportService.reportCore(user);
         String msg = "已完成注册，";
         if (serviceDTO.getFlag()) {
-            msg += "今日已上报";
+            redisService.set(REPORTED_NUMS, (int) redisService.get(REPORTED_NUMS) - 1);
+            msg += "当前已上报";
         } else {
             msg += "但当前上报未能完成，可能原因是此账号今日已自主上报";
         }
