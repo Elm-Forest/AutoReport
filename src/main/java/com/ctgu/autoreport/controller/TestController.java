@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static com.ctgu.autoreport.common.constant.CommonConst.REPORTED_HISTORY_DAY;
+
 /**
  * @author Elm Forest
  * @date 13/10/2022 下午8:31

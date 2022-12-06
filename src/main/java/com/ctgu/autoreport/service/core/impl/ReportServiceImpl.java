@@ -69,6 +69,18 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public void report() {
         log.info("开始执行该轮次");
+        Object o = redisService.get(IS_WORKING);
+        boolean flag;
+        if (o == null) {
+            flag = true;
+            redisService.set(IS_WORKING, true);
+        } else {
+            flag = (boolean) o;
+        }
+        if (!flag) {
+            log.warn("上报服务已暂停");
+            return;
+        }
         if ((int) redisService.get(REPORTED_NUMS) == 0) {
             log.warn("今日上报已完成");
             return;
@@ -107,6 +119,7 @@ public class ReportServiceImpl implements ReportService {
                         msg = msg + "已自动删除" + user;
                     } else {
                         msg = msg + "账号或者密码错误,自动删除已达上限！";
+                        redisService.set(IS_WORKING, false);
                         log.warn("自动删除达到上限时，当前用户:" + user);
                     }
                 } else {
@@ -136,6 +149,7 @@ public class ReportServiceImpl implements ReportService {
                 } catch (Exception e) {
                     log.error(e.getMessage());
                 }
+                redisService.set(IS_WORKING, false);
                 throw new BizException("发生严重错误！");
             }
             String formList = getFormList();
@@ -151,7 +165,15 @@ public class ReportServiceImpl implements ReportService {
             List<JsonDTO> historyList = getHistoryList();
             String summit;
             try {
-                summit = summit(token, historyList.get(2));
+                Object o = redisService.get(REPORTED_HISTORY_DAY);
+                int day;
+                if (o == null) {
+                    day = 0;
+                    redisService.set(REPORTED_HISTORY_DAY, day);
+                } else {
+                    day = (int) o;
+                }
+                summit = summit(token, historyList.get(day));
             } catch (Exception e) {
                 throw new BizException("summit抛出异常:" + e.getMessage());
             }
@@ -209,7 +231,11 @@ public class ReportServiceImpl implements ReportService {
                     .code(SERVICE_ERROR)
                     .message("您的账号已录入自动上报数据库，但是与安全上报服务器建立连接异常，很大概率是目前安全上报服务器已关机，您可以自行打开安全上报公众号查看页面是否可以加载。如果正常加载，本平台ip地址可能已遭受安全上报服务器封锁").build();
         }
-        assert result != null;
+        if (result == null) {
+            String msg = "登录业务发生异常";
+            log.error(msg);
+            throw new BizException(msg);
+        }
         if (successFlag.equals(result.body())) {
             return ServiceDTO.builder().flag(true).build();
         } else if (failFlag.equals(result.body())) {

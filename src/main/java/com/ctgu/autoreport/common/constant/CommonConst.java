@@ -15,4 +15,8 @@ public class CommonConst {
     public static final Integer LOGIN_FAILED_LIMIT = 2;
 
     public static final String REPORTED_NUMS = "report_nums:";
+
+    public static final String REPORTED_HISTORY_DAY = "report_history_day:";
+
+    public static final String IS_WORKING = "is_working:";
 }

@@ -10,8 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-import static com.ctgu.autoreport.common.constant.CommonConst.REPORTED_NUMS;
-import static com.ctgu.autoreport.common.constant.CommonConst.REPORTED_SUCCESS;
+import static com.ctgu.autoreport.common.constant.CommonConst.*;
 
 /**
  * @author Elm Forest
@@ -52,5 +51,6 @@ public class AutoWork {
             redisService.del(REPORTED_SUCCESS + user.getUsername());
         }
         redisService.set(REPORTED_NUMS, num);
+        redisService.set(REDIS_LOGIN_FAILED, 0);
     }
 }
