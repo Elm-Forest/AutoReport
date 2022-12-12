@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.mail.MessagingException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 import static com.ctgu.autoreport.common.constant.CommonConst.*;
 import static com.ctgu.autoreport.common.enums.StatusCodeEnum.SYSTEM_ERROR;
@@ -45,6 +48,21 @@ public class RegisterServiceImpl implements RegisterService {
 
     @Autowired
     private ReportService reportService;
+
+    private final String regLgSvcEorMsg;
+    private final String regLgSecMsg;
+    private final String delMoMsg;
+
+    public RegisterServiceImpl() throws IOException {
+        InputStream stream = getClass().getResourceAsStream("/message.properties");
+        Properties properties = new Properties();
+        properties.load(stream);
+        regLgSvcEorMsg = properties.getProperty("regLgSvcEorMsg");
+        regLgSecMsg = properties.getProperty("regLgSecMsg");
+        delMoMsg = properties.getProperty("delMoMsg");
+        assert stream != null;
+        stream.close();
+    }
 
     @Override
     public Result<?> register(UserVO userVO) {
@@ -79,8 +97,8 @@ public class RegisterServiceImpl implements RegisterService {
         try {
             mailService.sendMail(EmailDTO.builder()
                     .email(user.getEmail())
-                    .subject("CTGU自动安全上报系统账户移除通知")
-                    .content("您的账号" + user.getUsername() + "已被移除，本平台已删除有关您的所有信息<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>")
+                    .subject("自动安全上报系统账户移除通知")
+                    .content("您的账号" + user.getUsername() + delMoMsg)
                     .build());
         } catch (MessagingException e) {
             log.error("邮件服务发生异常: " + e.getMessage());
@@ -119,14 +137,8 @@ public class RegisterServiceImpl implements RegisterService {
                     }
                     mailService.sendMail(EmailDTO.builder()
                             .email(user.getEmail())
-                            .subject("欢迎注册CTGU自动安全上报系统")
-                            .content("您的账号" + user.getUsername() + "已完成本系统注册<p>但是由于安全上报服务器异常，未能验证您输入表单的正确性</p>" +
-                                    "<br>您可以自行前往安全上报公众号，检查页面是否可以加载</br>" +
-                                    "注意：本系统仅用于学习用途，您须保证您完全遵守疫情防控规定，在使用本系统期间您必须处在校内，如果您离校，请主动删除账号" +
-                                    "<br>继续使用即代表您同意该条约，由于个人原因造成疫情扩散等违规违法情形，作者不承担任何责任</br>" +
-                                    "<br>本系统完全保护且不收集您的个人信息，数据采用AES对称加密算法存储。如果您决定停止使用，系统会删除有关您的所有信息</br>" +
-                                    "<br>本项目开源且完全非盈利，开源地址：https://github.com/Elm-Forest/AutoReport</br>" +
-                                    "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和机器学习等任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
+                            .subject("欢迎注册自动安全上报系统")
+                            .content("您的账号" + user.getUsername() + regLgSvcEorMsg)
                             .build());
                 } catch (Exception e) {
                     log.error(e.getMessage());
@@ -147,13 +159,8 @@ public class RegisterServiceImpl implements RegisterService {
         try {
             mailService.sendMail(EmailDTO.builder()
                     .email(user.getEmail())
-                    .subject("欢迎注册CTGU自动安全上报系统")
-                    .content("您的账号" + user.getUsername() + "<br>已成功登录至安全上报服务器，并完成本系统注册</br>" +
-                            "注意：本系统仅用于学习用途，您须保证您完全遵守疫情防控规定，在使用本系统期间您必须处在校内，如果您离校，请主动删除账号" +
-                            "<br>继续使用即代表您同意该条约，由于个人原因造成疫情扩散等违规违法情形，作者不承担任何责任</br>" +
-                            "<br>本系统完全保护且不收集您的个人信息，数据采用AES对称加密算法存储。如果您决定停止使用，系统会删除有关您的所有信息</br>" +
-                            "<br>本系统开源且完全非盈利，开源地址：https://github.com/Elm-Forest/AutoReport</br>" +
-                            "欢迎关注作者的GitHub主页：https://github.com/Elm-Forest，如您有数据挖掘和机器学习等任务的协助需求，欢迎通过本邮箱联系作者，感谢使用")
+                    .subject("欢迎注册自动安全上报系统")
+                    .content("您的账号" + user.getUsername() + regLgSecMsg)
                     .build());
         } catch (Exception e) {
             log.error("邮件服务抛出异常:" + e.getMessage());

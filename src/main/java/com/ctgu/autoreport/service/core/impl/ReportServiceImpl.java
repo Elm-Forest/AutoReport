@@ -22,10 +22,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
 
 import static com.ctgu.autoreport.common.constant.CommonConst.*;
 
@@ -58,12 +57,19 @@ public class ReportServiceImpl implements ReportService {
     private String hostMail;
 
     private static final Map<String, String> HEADER_MAP = new HashMap<>();
+    private final String delAutoMsg;
 
-    public ReportServiceImpl() {
+    public ReportServiceImpl() throws IOException {
         HEADER_MAP.put("Accept", "*/*");
         HEADER_MAP.put("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6,ja;q=0.5");
         HEADER_MAP.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36");
         HEADER_MAP.put("Cookie", "_hjid=d2e89115-fce8-406e-9100-43d5e0583b90; _ga=GA1.3.1877050853.1635668836; _sp_id.e13e=239c0ebd-cc15-4eb1-83cf-21d68aa5eec3.1635668335.2.1635910905.1635668824.ebf4064b-164b-4811-a5ab-d64ed9744368; _vwo_uuid=DF8316058656E6E9EF4002DA48A68BF24; sensorsdata2015jssdkcross=%7B%22distinct_id%22%3A%2217d238163c6518-05ec00257e12b7-a7d173c-1327104-17d238163c710e9%22%2C%22first_id%22%3A%22%22%2C%22props%22%3A%7B%7D%2C%22%24device_id%22%3A%2217d238163c6518-05ec00257e12b7-a7d173c-1327104-17d238163c710e9%22%7D; JSESSIONID=456C3D97B20DDDFF3C8FB0B148CEEEB8");
+        InputStream stream = getClass().getResourceAsStream("/message.properties");
+        Properties properties = new Properties();
+        properties.load(stream);
+        delAutoMsg = properties.getProperty("delAutoMsg");
+        assert stream != null;
+        stream.close();
     }
 
     @Override
@@ -197,12 +203,9 @@ public class ReportServiceImpl implements ReportService {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         userMapper.delete(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         try {
-            mailService.sendMailWithSync(EmailDTO.builder().email(user.getEmail()).subject("CTGU自动安全上报系统:提供错误的账号或者密码").content("你好" + user.getUsername() +
-                    "<br>你似乎提供错误的账号或者密码，请求登录安全上报服务器后返回的结果为：" +
-                    "<br>用户名或密码输入错误！</br>" +
-                    "您的账号现已被自动移除</br>" +
-                    "如果您打算继续使用，请访问以下地址进行重新注册:<br>http://101.132.249.251:6633</br>" +
-                    "<br>如果您决定停止使用，系统已自动删除有关您的所有信息</br>" + "<br>本系统开源且完全非盈利，感谢使用，欢迎关注作者的GitHub主页：https://github.com/Elm-Forest</br>").build());
+            mailService.sendMailWithSync(EmailDTO.builder().email(user.getEmail())
+                    .subject("CTGU自动安全上报系统:提供错误的账号或者密码")
+                    .content("你好" + user.getUsername() + delAutoMsg).build());
         } catch (Exception e) {
             log.error(e.getMessage());
         }
