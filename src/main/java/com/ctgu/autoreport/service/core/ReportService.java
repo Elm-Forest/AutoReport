@@ -31,5 +31,8 @@ public interface ReportService {
      */
     ServiceDTO login(User user);
 
+    /**
+     * 内部接口请求服务
+     */
     void reportByApi();
 }

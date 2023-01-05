@@ -21,7 +21,6 @@ import static com.ctgu.autoreport.common.constant.CommonConst.*;
 public class AutoWork {
     @Autowired
     private ReportService report;
-
     @Autowired
     private RedisService redisService;
     @Autowired

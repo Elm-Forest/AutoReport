@@ -2,6 +2,7 @@ package com.ctgu.autoreport.service.common.impl;
 
 
 import com.ctgu.autoreport.service.common.RedisService;
+import jakarta.annotation.Resource;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
@@ -13,7 +14,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

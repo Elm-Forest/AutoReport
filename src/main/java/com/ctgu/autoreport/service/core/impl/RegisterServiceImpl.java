@@ -14,12 +14,12 @@ import com.ctgu.autoreport.service.common.MailService;
 import com.ctgu.autoreport.service.common.RedisService;
 import com.ctgu.autoreport.service.core.RegisterService;
 import com.ctgu.autoreport.service.core.ReportService;
+import jakarta.mail.MessagingException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.mail.MessagingException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
