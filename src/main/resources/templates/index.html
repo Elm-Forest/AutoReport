@@ -65,7 +65,7 @@
 </body>
 <script>
     Vue.prototype.$axios = axios
-    var app = new Vue({
+    const app = new Vue({
         el: '#app',
         name: 'Login',
         data() {
@@ -93,15 +93,20 @@
                         }
                     ]
                 },
+                commitNumber: '#Github访问失败#'
             }
         }, mounted() {
-            this.$alert('<li>由于国家疫情防控政策改变，目前已不需要安全上报服务</br>' +
-                '<li>12月9日起，安全上报服务器重新限制了访问IP地址，该脚本和其它人开发的脚本基本已失效</br>' +
-                '<li>自动上报服务不会停止，仍然可以注册和自动上报，但后期不再进行更新和维护。</br>' +
-                '自此项目搭建以来，作者已经进行了总计52次的更新</br>',
-                '更新', {
-                confirmButtonText: '确认',
-                dangerouslyUseHTMLString: true,
+            this.getTotalCommits('Elm-Forest', 'AutoReport').then(commits => {
+                this.commitNumber = commits;
+                this.$alert('<li>由于国家疫情防控政策改变，目前已不需要安全上报服务</br>' +
+                    '<li>自动上报服务不会停止，仍然可以注册和自动上报，但项目已经停止维护和更新</br>' +
+                    '<li>自此项目搭建以来，作者已经提交了' +
+                    '<b>'+this.commitNumber +'</b>'+
+                    '次Commit记录，上报成功率在同类脚本中领先</br>',
+                    '更新', {
+                        confirmButtonText: '确认',
+                        dangerouslyUseHTMLString: true,
+                    });
             });
         },
         methods: {
@@ -155,8 +160,34 @@
                         })
                     }
                 })
+            },
+            getTotalCommits(owner, repo) {
+                let url = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=100`;
+                let pages = 0;
+                return fetch(url, {
+                    headers: {
+                        Accept: "application/vnd.github.v3+json",
+                    },
+                }).then((data) => data.headers).then(
+                    (result) => result.get("link")
+                        .split(",")[1]
+                        .match(/.*page=(?<page_num>\d+)/).groups.page_num
+                ).then((numberOfPages) => {
+                    pages = numberOfPages;
+                    return fetch(url + `&page=${numberOfPages}`, {
+                        headers: {
+                            Accept: "application/vnd.github.v3+json",
+                        },
+                    }).then((data) => data.json());
+                }).then((data) => {
+                    return data.length + (pages - 1) * 100;
+                }).catch((err) => {
+                    console.log(`ERROR: calling: ${url}`);
+                    console.log("See below for more info:");
+                    console.log(err);
+                });
             }
         }
-    })
+    });
 </script>
 </html>
